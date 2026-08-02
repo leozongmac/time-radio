@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="AI时光收音机：旋转年份与月份，实时聆听来自历史时光的新闻。"
+    />
+    <title>AI时光收音机</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <p class="eyebrow">TIME RADIO · 云端时光广播</p>
+          <h1>AI时光收音机</h1>
+          <p class="author-line">作者：AI <span>|</span> 造物主 <span>|</span> 三川</p>
+        </div>
+        <div class="topbar-actions">
+          <div class="system-status" id="system-status" data-testid="system-status">
+            <span class="status-lamp" aria-hidden="true"></span>
+            <span id="system-status-text">正在检查设备</span>
+          </div>
+          <button
+            class="text-button"
+            id="open-settings"
+            data-testid="open-settings"
+            type="button"
+          >
+            播音设置
+          </button>
+        </div>
+      </header>
+
+      <nav class="mode-switcher" aria-label="功能模式">
+        <button
+          class="mode-button is-active"
+          id="mode-time"
+          data-mode="time"
+          data-testid="mode-time"
+          type="button"
+        >
+          时光新闻
+        </button>
+      </nav>
+
+      <main>
+        <section class="mode-view is-active" id="time-view" data-view="time">
+          <div class="radio-layout">
+            <section class="radio-stage" aria-label="时光收音机控制台">
+              <div class="radio-image-wrap">
+                <img
+                  class="radio-image"
+                  src="/static/assets/vintage-radio-1986-8.png"
+                  alt="八十年代中国胡同窗前木桌上的复古收音机"
+                />
+                <div class="radio-vignette" aria-hidden="true"></div>
+
+                <div
+                  class="date-display"
+                  id="date-display"
+                  data-testid="date-display"
+                  aria-live="polite"
+                  aria-hidden="true"
+                >
+                  <span id="display-year">1986</span><span class="display-dot">.</span
+                  ><span id="display-month">08</span>
+                </div>
+
+                <div class="power-control">
+                  <button
+                    class="power-button"
+                    id="power-button"
+                    data-testid="power-button"
+                    type="button"
+                    aria-pressed="false"
+                  >
+                    <span class="power-core"></span>
+                  </button>
+                  <span class="knob-label">开机</span>
+                </div>
+
+                <div class="knob-control knob-year">
+                  <button
+                    class="knob"
+                    id="year-knob"
+                    data-testid="year-knob"
+                    type="button"
+                    role="slider"
+                    aria-label="年份"
+                    aria-valuemin="1949"
+                    aria-valuemax="2026"
+                    aria-valuenow="1986"
+                  >
+                    <span class="knob-face"><span class="knob-pointer"></span></span>
+                  </button>
+                  <span class="knob-label">年份</span>
+                </div>
+
+                <div class="knob-control knob-month">
+                  <button
+                    class="knob"
+                    id="month-knob"
+                    data-testid="month-knob"
+                    type="button"
+                    role="slider"
+                    aria-label="月份"
+                    aria-valuemin="1"
+                    aria-valuemax="12"
+                    aria-valuenow="8"
+                  >
+                    <span class="knob-face"><span class="knob-pointer"></span></span>
+                  </button>
+                  <span class="knob-label">月份</span>
+                </div>
+
+                <div class="playback-control">
+                  <button
+                    class="playback-button"
+                    id="playback-toggle"
+                    data-testid="playback-toggle"
+                    type="button"
+                    aria-label="播放或暂停"
+                    disabled
+                  >
+                    <span class="playback-icon" aria-hidden="true">▶</span>
+                  </button>
+                  <span class="knob-label">播放 / 暂停</span>
+                </div>
+
+                <p class="interaction-hint">拖动或滚动旋钮 · 按方向键精调</p>
+              </div>
+
+              <div class="timeline-console">
+                <div>
+                  <p class="console-kicker">当前调谐</p>
+                  <p class="console-date">
+                    <span id="console-year">1986</span> 年
+                    <span id="console-month">08</span> 月
+                  </p>
+                </div>
+                <div class="broadcast-state">
+                  <span class="broadcast-dot" aria-hidden="true"></span>
+                  <span id="broadcast-status" data-testid="broadcast-status">等待开机</span>
+                </div>
+              </div>
+            </section>
+
+            <aside class="news-panel" aria-labelledby="news-heading">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">历史频段</p>
+                  <h2 id="news-heading">本月新闻播报</h2>
+                </div>
+                <button
+                  class="quiet-button"
+                  id="stop-broadcast"
+                  data-testid="stop-broadcast"
+                  type="button"
+                  disabled
+                >
+                  停止
+                </button>
+              </div>
+
+              <div class="news-empty" id="news-empty">
+                <span class="empty-rule" aria-hidden="true"></span>
+                <p>旋转旋钮选择时间，再按下收音机中央的开机按钮。</p>
+              </div>
+              <ol class="news-list" id="news-list" data-testid="news-list"></ol>
+              <p class="news-disclaimer" id="news-disclaimer"></p>
+            </aside>
+          </div>
+        </section>
+
+        <section class="mode-view" id="text-view" data-view="text">
+          <div class="text-studio">
+            <section class="text-editor">
+              <p class="panel-kicker">独立播音室</p>
+              <h2>把文字交给时光里的声音</h2>
+              <p class="text-intro">
+                输入任意中文内容，系统会按自然语句分段，并使用当前播音引擎逐段生成和播放。
+              </p>
+              <label class="field-label" for="tts-text">播报文字</label>
+              <textarea
+                id="tts-text"
+                data-testid="tts-text"
+                rows="12"
+                maxlength="4000"
+                placeholder="例如：这里是时光收音机。现在为你播送一段来自过去的声音……"
+              ></textarea>
+              <div class="editor-footer">
+                <span id="text-count">0 / 4000</span>
+                <div class="editor-actions">
+                  <button
+                    class="quiet-button"
+                    id="stop-text-speech"
+                    type="button"
+                    disabled
+                  >
+                    停止
+                  </button>
+                  <button
+                    class="primary-button"
+                    id="start-text-speech"
+                    data-testid="start-text-speech"
+                    type="button"
+                  >
+                    生成并播放
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <aside class="voice-summary">
+              <p class="panel-kicker">当前播音配置</p>
+              <h3 id="active-engine-name">讯飞云 TTS</h3>
+              <dl>
+                <div>
+                  <dt>声音</dt>
+                  <dd id="active-voice-name">讯飞小燕 · xiaoyan</dd>
+                </div>
+                <div>
+                  <dt>密钥</dt>
+                  <dd>DeepSeek 仅限会话；TTS 可保存到当前浏览器</dd>
+                </div>
+                <div>
+                  <dt>播放方式</dt>
+                  <dd>分段生成，连续播放</dd>
+                </div>
+              </dl>
+              <button class="text-button wide" id="open-settings-from-text" type="button">
+                修改播音设置
+              </button>
+              <div class="text-play-status" id="text-play-status">等待输入文字</div>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+    <aside
+      class="settings-drawer"
+      id="settings-drawer"
+      aria-labelledby="settings-heading"
+      aria-hidden="true"
+    >
+      <div class="drawer-header">
+        <div>
+          <p class="panel-kicker">云端 Web 配置</p>
+          <h2 id="settings-heading">播音设置</h2>
+        </div>
+        <button class="close-button" id="close-settings" type="button" aria-label="关闭设置">
+          关闭
+        </button>
+      </div>
+
+      <div class="drawer-scroll">
+        <section class="settings-section">
+          <h3>历史新闻</h3>
+          <label class="field-label" for="deepseek-key">DeepSeek API Key</label>
+          <input
+            id="deepseek-key"
+            data-testid="deepseek-key"
+            type="password"
+            autocomplete="off"
+            placeholder="sk-..."
+          />
+          <p class="field-help">
+            默认只在当前页面使用；点击保存后会写入当前浏览器，不会保存到服务器。
+          </p>
+          <div class="settings-button-row">
+            <button
+              class="quiet-button"
+              id="clear-deepseek-key"
+              data-testid="clear-deepseek-key"
+              type="button"
+            >
+              清空 API Key
+            </button>
+            <button
+              class="quiet-button"
+              id="save-deepseek-key"
+              data-testid="save-deepseek-key"
+              type="button"
+            >
+              保存 API Key
+            </button>
+          </div>
+          <label class="field-label" for="deepseek-model">DeepSeek 模型</label>
+          <select id="deepseek-model" data-testid="deepseek-model">
+            <option value="deepseek-v4-flash">DeepSeek V4 Flash</option>
+            <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
+          </select>
+          <div class="settings-button-row">
+            <button
+              class="quiet-button"
+              id="refresh-deepseek-models"
+              data-testid="refresh-deepseek-models"
+              type="button"
+            >
+              刷新模型
+            </button>
+            <button
+              class="primary-button"
+              id="select-deepseek-model"
+              data-testid="select-deepseek-model"
+              type="button"
+            >
+              选择此模型
+            </button>
+          </div>
+          <p class="field-help" id="deepseek-model-note">
+            当前使用：DeepSeek V4 Flash
+          </p>
+        </section>
+
+        <section class="settings-section">
+          <h3>播音引擎</h3>
+          <div class="engine-options" role="radiogroup" aria-label="播音引擎">
+            <label class="engine-option">
+              <input type="radio" name="tts-engine" value="iflytek" checked />
+              <span>
+                <strong>讯飞云 TTS</strong>
+                <small>低配置电脑可用，流式云端合成</small>
+              </span>
+            </label>
+            <label class="engine-option">
+              <input type="radio" name="tts-engine" value="baidu" />
+              <span>
+                <strong>百度云 TTS</strong>
+                <small>低配置电脑可用，短文本在线合成</small>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3>环境白噪声</h3>
+          <label class="white-noise-control" for="white-noise-volume">
+            <span>
+              <span>播放音量</span>
+              <output id="white-noise-volume-value" for="white-noise-volume">18%</output>
+            </span>
+            <input
+              id="white-noise-volume"
+              data-testid="white-noise-volume"
+              type="range"
+              min="0"
+              max="100"
+              value="18"
+            />
+          </label>
+          <p class="field-help">
+            开机后自动循环播放，关机后停止。建议保持较低音量，避免盖过新闻播报。
+          </p>
+        </section>
+
+        <section class="settings-section provider-panel" id="iflytek-settings">
+          <div class="section-heading-row">
+            <h3>讯飞开放平台</h3>
+            <button
+              class="quiet-button compact-button"
+              id="refresh-iflytek-voices"
+              data-testid="refresh-iflytek-voices"
+              type="button"
+            >
+              刷新声音
+            </button>
+          </div>
+          <div class="field-grid">
+            <label>
+              <span class="field-label">AppID</span>
+              <input id="iflytek-app-id" type="password" autocomplete="off" />
+            </label>
+            <label>
+              <span class="field-label">APIKey</span>
+              <input id="iflytek-api-key" type="password" autocomplete="off" />
+            </label>
+          </div>
+          <label class="field-label" for="iflytek-api-secret">APISecret</label>
+          <input id="iflytek-api-secret" type="password" autocomplete="off" />
+          <label class="field-label" for="iflytek-voice">发音人参数</label>
+          <input
+            id="iflytek-voice"
+            data-testid="iflytek-voice"
+            type="text"
+            value="xiaoyan"
+            list="iflytek-voice-options"
+          />
+          <datalist id="iflytek-voice-options"></datalist>
+          <p class="field-help" id="iflytek-voice-note">
+            点击刷新获取声音目录，也可直接填写讯飞控制台显示的 vcn 参数。
+          </p>
+          <div class="range-grid">
+            <label>语速<input id="iflytek-speed" type="range" min="0" max="100" value="50" /></label>
+            <label>音调<input id="iflytek-pitch" type="range" min="0" max="100" value="50" /></label>
+            <label>音量<input id="iflytek-volume" type="range" min="0" max="100" value="50" /></label>
+          </div>
+        </section>
+
+        <section class="settings-section provider-panel" id="baidu-settings" hidden>
+          <div class="section-heading-row">
+            <h3>百度智能云</h3>
+            <button
+              class="quiet-button compact-button"
+              id="refresh-baidu-voices"
+              data-testid="refresh-baidu-voices"
+              type="button"
+            >
+              刷新声音
+            </button>
+          </div>
+          <label class="field-label" for="baidu-api-key">API Key</label>
+          <input id="baidu-api-key" type="password" autocomplete="off" />
+          <label class="field-label" for="baidu-secret-key">Secret Key</label>
+          <input id="baidu-secret-key" type="password" autocomplete="off" />
+          <label class="field-label" for="baidu-voice">发音人</label>
+          <select id="baidu-voice" data-testid="baidu-voice">
+            <option value="0">度小美 · 基础女声 · 0</option>
+          </select>
+          <p class="field-help" id="baidu-voice-note">点击刷新获取百度云声音目录。</p>
+          <div class="range-grid">
+            <label>语速<input id="baidu-speed" type="range" min="0" max="15" value="5" /></label>
+            <label>音调<input id="baidu-pitch" type="range" min="0" max="15" value="5" /></label>
+            <label>音量<input id="baidu-volume" type="range" min="0" max="15" value="5" /></label>
+          </div>
+        </section>
+      </div>
+
+      <div class="drawer-footer">
+        <p class="credential-storage-note">
+          TTS 凭证仅保存在当前浏览器的本地存储中，不会写入服务器配置文件。
+        </p>
+        <div class="drawer-footer-actions">
+          <button class="quiet-button" id="clear-tts-settings" data-testid="clear-tts-settings" type="button">
+            清空 TTS 凭证
+          </button>
+          <button class="quiet-button" id="save-tts-settings" data-testid="save-tts-settings" type="button">
+            保存 TTS 凭证
+          </button>
+          <button class="primary-button" id="apply-settings" data-testid="apply-settings" type="button">
+            应用
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <audio
+      id="white-noise-audio"
+      src="/static/assets/BZS.mp3"
+      loop
+      preload="auto"
+    ></audio>
+    <div class="toast-region" id="toast-region" aria-live="polite"></div>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "time-radio"
+version = "0.1.0"
+description = "A web-based historical news radio with cloud TTS engines."
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "httpx>=0.28,<1",
+    "pydantic>=2.10,<3",
+    "uvicorn[standard]>=0.34,<1",
+    "websockets>=15,<17",
+]
+
+[project.optional-dependencies]
+test = [
+    "httpx>=0.28,<1",
+    "pytest>=8.3,<9",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["time_radio"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
