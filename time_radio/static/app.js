@@ -3,6 +3,7 @@
 const currentYear = new Date().getFullYear();
 const TTS_SETTINGS_STORAGE_KEY = "time-radio-tts-settings-v1";
 const DEEPSEEK_SETTINGS_STORAGE_KEY = "time-radio-deepseek-settings-v1";
+const DATE_REFRESH_DELAY_MS = 2000;
 
 const state = {
   year: Math.min(1986, currentYear),
@@ -21,6 +22,8 @@ const state = {
   activeAbortController: null,
   playbackGeneration: 0,
   broadcastRunning: false,
+  broadcastRequestId: 0,
+  dateRefreshTimer: null,
   newsDigest: null,
 };
 
@@ -136,13 +139,42 @@ function updateDateUI() {
   updateKnobVisual(elements.monthKnob, state.month, 1, 12);
 }
 
+function clearDateRefreshTimer() {
+  if (state.dateRefreshTimer === null) {
+    return;
+  }
+  window.clearTimeout(state.dateRefreshTimer);
+  state.dateRefreshTimer = null;
+}
+
+function scheduleDateNewsRefresh() {
+  clearDateRefreshTimer();
+  if (!state.poweredOn) {
+    return;
+  }
+  setBroadcastStatus(
+    "\u65f6\u95f4\u5df2\u8c03\u6574\uff0c\u505c\u6b62\u64cd\u4f5c 2 \u79d2\u540e\u81ea\u52a8\u66f4\u65b0\u65b0\u95fb",
+    false,
+  );
+  state.dateRefreshTimer = window.setTimeout(() => {
+    state.dateRefreshTimer = null;
+    refreshNewsForDate().catch((error) => showToast(error.message, "error"));
+  }, DATE_REFRESH_DELAY_MS);
+}
+
 function setDateValue(kind, value) {
+  const previousYear = state.year;
+  const previousMonth = state.month;
   if (kind === "year") {
     state.year = clamp(Math.round(value), state.minimumYear, state.maximumYear);
   } else {
     state.month = clamp(Math.round(value), 1, 12);
   }
+  const dateChanged = state.year !== previousYear || state.month !== previousMonth;
   updateDateUI();
+  if (dateChanged) {
+    scheduleDateNewsRefresh();
+  }
 }
 
 function setupKnob(knob, kind, minimumGetter, maximumGetter) {
@@ -1015,6 +1047,15 @@ function stopPlayback() {
   });
 }
 
+function cancelBroadcast() {
+  clearDateRefreshTimer();
+  state.broadcastRequestId += 1;
+  stopPlayback();
+  state.broadcastRunning = false;
+  elements.stopBroadcast.disabled = true;
+  updatePlaybackControl();
+}
+
 async function playSegments(segments, onSegmentStart, onStatus) {
   validateTTSConfiguration();
   stopPlayback();
@@ -1088,14 +1129,19 @@ function handleNewsStreamEvent(event, onSpeechText) {
   throw new Error(`收到未知的新闻流事件：${event.type}`);
 }
 
-async function loadNewsWithoutSpeech() {
+async function loadNewsWithoutSpeech(requestId) {
   stopPlayback();
   const controller = new AbortController();
   state.activeAbortController = controller;
   initializeNewsSession();
   try {
     await streamNews(
-      (event) => handleNewsStreamEvent(event, () => {}),
+      (event) => {
+        if (state.broadcastRequestId !== requestId) {
+          return;
+        }
+        handleNewsStreamEvent(event, () => {});
+      },
       controller.signal,
     );
     setBroadcastStatus("新闻获取完成；未配置语音播报", false);
@@ -1106,7 +1152,7 @@ async function loadNewsWithoutSpeech() {
   }
 }
 
-async function loadNewsWithSpeech() {
+async function loadNewsWithSpeech(requestId) {
   validateTTSConfiguration();
   stopPlayback();
   const generation = state.playbackGeneration;
@@ -1120,10 +1166,14 @@ async function loadNewsWithSpeech() {
   initializeNewsSession();
   try {
     await streamNews(
-      (event) =>
+      (event) => {
+        if (state.broadcastRequestId !== requestId) {
+          return;
+        }
         handleNewsStreamEvent(event, (text, newsIndex) => {
           enqueueSpeechText(textQueue, text, newsIndex);
-        }),
+        });
+      },
       controller.signal,
     );
     closeQueue(textQueue, null);
@@ -1160,17 +1210,23 @@ async function handlePlaybackButton() {
     showToast("新闻正在获取或等待语音生成，请稍候。", "info");
     return;
   }
+  clearDateRefreshTimer();
+  const requestId = state.broadcastRequestId + 1;
+  state.broadcastRequestId = requestId;
   state.broadcastRunning = true;
   updatePlaybackControl();
   try {
     const ttsError = getTTSConfigurationError();
     if (ttsError === null) {
-      await loadNewsWithSpeech();
+      await loadNewsWithSpeech(requestId);
     } else {
       showToast(`${ttsError} 新闻仍会正常获取，但本次不播报语音。`, "info");
-      await loadNewsWithoutSpeech();
+      await loadNewsWithoutSpeech(requestId);
     }
   } catch (error) {
+    if (state.broadcastRequestId !== requestId) {
+      return;
+    }
     if (error.name !== "AbortError") {
       elements.newsEmpty.hidden = state.newsDigest?.items.length > 0;
       if (!elements.newsEmpty.hidden) {
@@ -1180,15 +1236,27 @@ async function handlePlaybackButton() {
       showToast(error.message, "error");
     }
   } finally {
-    state.broadcastRunning = false;
-    elements.stopBroadcast.disabled = true;
-    updatePlaybackControl();
+    if (state.broadcastRequestId === requestId) {
+      state.broadcastRunning = false;
+      elements.stopBroadcast.disabled = true;
+      updatePlaybackControl();
+    }
   }
+}
+
+async function refreshNewsForDate() {
+  if (!state.poweredOn) {
+    return;
+  }
+  if (state.broadcastRunning || state.currentAudio !== null) {
+    cancelBroadcast();
+  }
+  await handlePlaybackButton();
 }
 
 async function handlePowerButton() {
   if (state.poweredOn) {
-    stopPlayback();
+    cancelBroadcast();
     stopWhiteNoise();
     setPower(false);
     return;
@@ -1281,8 +1349,7 @@ elements.playbackToggle.addEventListener("click", () => {
   handlePlaybackButton().catch((error) => showToast(error.message, "error"));
 });
 elements.stopBroadcast.addEventListener("click", () => {
-  stopPlayback();
-  elements.stopBroadcast.disabled = true;
+  cancelBroadcast();
   setBroadcastStatus("播报已停止", false);
 });
 elements.openSettings.addEventListener("click", openSettingsDrawer);
